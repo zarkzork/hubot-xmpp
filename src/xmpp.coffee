@@ -184,6 +184,8 @@ class XmppBot extends Adapter
       return true if joined.jid == room
     return false
 
+  # Strings can be either simple strings or objects. If object is passed, it should contain two keys:
+  # { 'body' : 'simple body', 'html_body' : '<span style="color:#ff0000;">body with formating!</span>' }
   send: (user, strings...) ->
     for str in strings
       @robot.logger.debug "Sending to #{user.room}: #{str}"
@@ -193,8 +195,18 @@ class XmppBot extends Adapter
         type: user.type or 'groupchat'
         from: @options.username
 
-      message = new Xmpp.Element('message', params).
-                c('body').t(str)
+      message = new Xmpp.Element('message', params)
+
+      if str.constructor.name == 'Object'
+        body = message
+          .c('body').t(str.body).up()
+          .cnode
+            write: (writer) ->
+              writer('<html xmlns="http://www.w3.org/1999/xhtml"><body>')
+              writer(str.html_body)
+              writer('</body></html>')
+      else
+        message.c('body').t(str)
 
       @client.send message
 
